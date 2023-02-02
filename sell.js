@@ -66,9 +66,9 @@ const main = async () => {
   console.log("Token IDs to sell:", tokenIdsToSell);
 
   const bayc = new ethers.Contract(GOERLI_BAYC_ADDRESS, erc721Abi, signer);
-  // const approveTx = await bayc.setApprovalForAll(baycEthPairAddress, true);
-  // console.log("Approve transaction:", approveTx);
-  // await approveTx.wait();
+  const approveTx = await bayc.setApprovalForAll(baycEthPairAddress, true);
+  console.log("Approve transaction:", approveTx);
+  await approveTx.wait();
 
   // deadline for the trade is 60 minutes from now
   const deadline = parseInt((Date.now() + 1000 * 60 * 60) / 1000);
