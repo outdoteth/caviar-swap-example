@@ -15,8 +15,8 @@ const main = async () => {
   const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
   // create the contract instance for caviar
-  const GOERLI_CAVIAR_ADDRESS = "0x6f33e79E7AC6F73fF18ABa8018060B124821C2E2";
-  const GOERLI_BAYC_ADDRESS = "0xC1A308D95344716054d4C078831376FC78c4fd72";
+  const GOERLI_CAVIAR_ADDRESS = "0x15B9D8ba57E67D6683f3E7Bec24A32b98a7cdb6b";
+  const GOERLI_BAYC_ADDRESS = "0xc1a308d95344716054d4c078831376fc78c4fd72";
   const Caviar = new ethers.Contract(
     GOERLI_CAVIAR_ADDRESS,
     caviarAbi,
@@ -39,12 +39,14 @@ const main = async () => {
   const fractionalTokenReserves = await BaycEthPair.fractionalTokenReserves();
 
   // calculate the amount of ETH to buy 2 BAYCs using xy=k formula
+  // 2 BAYCs == 2 * 1e18 fractional tokens
   const AMOUNT_TO_BUY = ethers.BigNumber.from("2").mul(
     ethers.utils.parseUnits("1", 18)
-  ); // 2 BAYC == 2 * 10^18
+  );
   const ethCost = AMOUNT_TO_BUY.mul(baseTokenReserves)
     .mul("1000")
-    .div(fractionalTokenReserves.sub(AMOUNT_TO_BUY).mul("997"));
+    .div(fractionalTokenReserves.sub(AMOUNT_TO_BUY).mul("990"))
+    .add("1");
 
   console.log(
     "ETHER cost to buy 2 BAYCs:",
@@ -66,8 +68,11 @@ const main = async () => {
   const tokenIdsToBuy = [ownedNfts[0].tokenId, ownedNfts[1].tokenId];
   console.log("Token Ids to buy:", tokenIdsToBuy);
 
+  const deadline = parseInt((Date.now() + 1000 * 60) / 1000);
+  console.log("Trade deadline unix timestamp:", deadline);
+
   // submit the transaction to buy the NFTs
-  const tx = await BaycEthPair.nftBuy(tokenIdsToBuy, ethCost, {
+  const tx = await BaycEthPair.nftBuy(tokenIdsToBuy, ethCost, deadline, {
     value: ethCost,
   });
   console.log("Transaction:", tx);
