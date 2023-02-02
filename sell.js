@@ -3,6 +3,7 @@ const caviarAbi = require("./caviar.abi.json");
 const pairAbi = require("./pair.abi.json");
 const erc721Abi = require("./erc721.abi.json");
 const { Alchemy, Network } = require("alchemy-sdk");
+const fetch = require("node-fetch");
 require("dotenv").config();
 
 const main = async () => {
@@ -16,8 +17,8 @@ const main = async () => {
   const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
   // create the contract instance for caviar
-  const GOERLI_CAVIAR_ADDRESS = "0x6f33e79E7AC6F73fF18ABa8018060B124821C2E2";
-  const GOERLI_BAYC_ADDRESS = "0xC1A308D95344716054d4C078831376FC78c4fd72";
+  const GOERLI_CAVIAR_ADDRESS = "0x15B9D8ba57E67D6683f3E7Bec24A32b98a7cdb6b";
+  const GOERLI_BAYC_ADDRESS = "0xc1a308d95344716054d4c078831376fc78c4fd72";
   const Caviar = new ethers.Contract(
     GOERLI_CAVIAR_ADDRESS,
     caviarAbi,
@@ -44,9 +45,9 @@ const main = async () => {
   const AMOUNT_TO_SELL = ethers.BigNumber.from("2").mul(
     ethers.utils.parseUnits("1", 18)
   );
-  const ethReceived = AMOUNT_TO_SELL.mul("997")
+  const ethReceived = AMOUNT_TO_SELL.mul("990")
     .mul(baseTokenReserves)
-    .div(fractionalTokenReserves.mul("1000").add(AMOUNT_TO_SELL.mul("997")));
+    .div(fractionalTokenReserves.mul("1000").add(AMOUNT_TO_SELL.mul("990")));
 
   console.log("ETH received:", ethers.utils.formatEther(ethReceived), "ETH");
 
@@ -65,11 +66,36 @@ const main = async () => {
   console.log("Token IDs to sell:", tokenIdsToSell);
 
   const bayc = new ethers.Contract(GOERLI_BAYC_ADDRESS, erc721Abi, signer);
-  const approveTx = await bayc.setApprovalForAll(baycEthPairAddress, true);
-  console.log("Approve transaction:", approveTx);
-  await approveTx.wait();
+  // const approveTx = await bayc.setApprovalForAll(baycEthPairAddress, true);
+  // console.log("Approve transaction:", approveTx);
+  // await approveTx.wait();
 
-  const tx = await BaycEthPair.nftSell(tokenIdsToSell, ethReceived, []);
+  // deadline for the trade is 60 minutes from now
+  const deadline = parseInt((Date.now() + 1000 * 60 * 60) / 1000);
+  console.log("Trade deadline unix timestamp:", deadline);
+
+  // fetch the stolen NFT proofs from reservoir
+  const reservoirUrl = `https://api.reservoir.tools/oracle/tokens/status/v2?${tokenIdsToSell
+    .map((tokenId) => `tokens=${GOERLI_BAYC_ADDRESS}:${tokenId}`)
+    .join("&")}`;
+
+  const { messages } = await fetch(reservoirUrl, {
+    headers: { "x-api-key": "demo-api-key" }, // you can use your own API key here or the default "demo-api-key"
+  }).then((res) => res.json());
+
+  const orderedMessages = tokenIdsToSell.map(
+    (tokenId) =>
+      messages.find(({ token }) => token.split(":")[1] === tokenId.toString())
+        .message
+  );
+
+  const tx = await BaycEthPair.nftSell(
+    tokenIdsToSell,
+    ethReceived,
+    deadline,
+    [],
+    orderedMessages
+  );
   console.log("Sell transaction:", tx);
 };
 

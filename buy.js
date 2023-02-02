@@ -68,7 +68,8 @@ const main = async () => {
   const tokenIdsToBuy = [ownedNfts[0].tokenId, ownedNfts[1].tokenId];
   console.log("Token Ids to buy:", tokenIdsToBuy);
 
-  const deadline = parseInt((Date.now() + 1000 * 60) / 1000);
+  // deadline for the trade is 60 minutes from now
+  const deadline = parseInt((Date.now() + 1000 * 60 * 60) / 1000);
   console.log("Trade deadline unix timestamp:", deadline);
 
   // submit the transaction to buy the NFTs
